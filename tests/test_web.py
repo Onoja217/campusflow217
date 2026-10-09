@@ -74,6 +74,11 @@ class BrowserTicketCreationTests(unittest.TestCase):
         self.assertEqual(len(stored), 2)
         self.assertEqual({ticket["id"] for ticket in stored}, {"T001", "T002"})
 
+    def test_all_tickets_table_has_explicit_category_column(self):
+        self.assertIn("<th>Category</th>", PAGE)
+        self.assertIn("placeholder=\"Search title, ID, category, or assignee…\"", PAGE)
+        self.assertIn("</td><td>'+esc(t.category)+'</td><td>'+pill(t.priority)", PAGE)
+
     def test_queue_preview_explains_limit_and_shows_category(self):
         self.assertIn("top '+Math.min(5,queue.length)+' shown", PAGE)
         self.assertIn("esc(t.id)+' · '+esc(t.category)+' · '+esc(t.priority)", PAGE)
