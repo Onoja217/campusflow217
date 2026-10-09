@@ -14,7 +14,7 @@ CATEGORIES = ("Network", "Hardware", "Software", "Other")
 URGENCY_LEVELS = ("low", "medium", "high")
 PRIORITIES = ("low", "medium", "high", "critical")
 TICKET_STATUSES = ("open", "in_progress", "resolved")
-TICKET_ID_PATTERN = re.compile(r"^T(\\d+)$")
+TICKET_ID_PATTERN = re.compile(r"^T(\d+)$")
 DETAIL_FIELDS = (
     ("id", "ID"),
     ("title", "Title"),
