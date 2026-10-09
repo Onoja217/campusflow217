@@ -38,10 +38,10 @@ class CliPersistenceSmokeTests(unittest.TestCase):
                     "high\n"
                     "12\n"
                     "4\n"
-                    "T1\n"
+                    "T001\n"
                     "Jireh Samuel\n"
                     "5\n"
-                    "T1\n"
+                    "T001\n"
                     "in_progress\n"
                     "7\n"
                 ),
@@ -55,9 +55,9 @@ class CliPersistenceSmokeTests(unittest.TestCase):
                 0,
                 msg=f"First CLI launch failed:\n{first_launch.stdout}\n{first_launch.stderr}",
             )
-            self.assertIn("Created T1:", first_launch.stdout)
-            self.assertIn("Assigned T1 to Jireh Samuel.", first_launch.stdout)
-            self.assertIn("T1 status changed to in_progress.", first_launch.stdout)
+            self.assertIn("Created T001:", first_launch.stdout)
+            self.assertIn("Assigned T001 to Jireh Samuel.", first_launch.stdout)
+            self.assertIn("T001 status changed to in_progress.", first_launch.stdout)
             self.assertTrue(tickets_path.is_file(), "CLI did not create the ticket file.")
 
             second_launch = subprocess.run(
