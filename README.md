@@ -1,6 +1,6 @@
 # CampusFlow
 
-CampusFlow is a Python helpdesk ticket tracker with both an interactive command-line interface (CLI) and a local browser dashboard. It supports validated ticket creation, automatic priority calculation, assignment, status changes, an unresolved-ticket priority queue, and JSON persistence.
+CampusFlow is a Python helpdesk ticket tracker with both an interactive command-line interface (CLI) and a local browser dashboard. It supports validated ticket creation, automatic priority calculation, assignment, status changes, an unresolved-ticket priority queue, workload reports by status and priority, and JSON persistence.
 
 ## Features
 
@@ -11,6 +11,7 @@ CampusFlow is a Python helpdesk ticket tracker with both an interactive command-
 - **Assign tickets:** record the person responsible for a ticket.
 - **Manage status:** move tickets through `open → in_progress → resolved`; assigned tickets are required before starting work. Resolved tickets can be explicitly reopened.
 - **Review the priority queue:** see unresolved tickets ordered by priority, with resolved tickets excluded.
+- **View workload reports:** see total tickets and counts for every supported status and priority, including categories with zero tickets.
 - **Save work:** store ticket records in JSON so they persist after the app restarts.
 - **Use either interface:** the CLI and browser dashboard use the same ticket rules and default JSON data file.
 
@@ -39,6 +40,7 @@ Choose an action from the menu:
 | 6 | Reopen resolved ticket |
 | 7 | Exit |
 | 8 | Show unresolved priority queue |
+| 9 | Show ticket report |
 
 On systems where `python` points to Python 3, you can use `python -m campusflow.cli` instead.
 
