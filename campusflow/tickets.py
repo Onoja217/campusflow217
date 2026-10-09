@@ -6,14 +6,15 @@ truth for sequential ID generation and ticket views.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import re
-from typing import Iterable, Mapping, MutableSequence, TypeAlias
+from typing import Iterable, Mapping, MutableMapping, MutableSequence, TypeAlias
 
 CATEGORIES = ("Network", "Hardware", "Software", "Other")
 URGENCY_LEVELS = ("low", "medium", "high")
 PRIORITIES = ("low", "medium", "high", "critical")
-TICKET_ID_PATTERN = re.compile(r"^T(\d+)$")
+TICKET_STATUSES = ("open", "in_progress", "resolved")
+TICKET_ID_PATTERN = re.compile(r"^T(\\d+)$")
 DETAIL_FIELDS = (
     ("id", "ID"),
     ("title", "Title"),
@@ -195,6 +196,95 @@ def get_ticket_by_id(
         if _field(ticket, "id") == requested_id:
             return ticket
     return None
+
+
+def _replace_ticket_status(
+    tickets: MutableSequence[TicketLike], index: int, status: str
+) -> TicketLike:
+    """Update status while respecting the immutable Ticket dataclass."""
+    ticket = tickets[index]
+    if isinstance(ticket, Ticket):
+        updated_ticket = replace(ticket, status=status)
+        tickets[index] = updated_ticket
+        return updated_ticket
+    if isinstance(ticket, MutableMapping):
+        ticket["status"] = status
+        return ticket
+    raise TicketValidationError(
+        "This ticket record cannot be updated because it is read-only."
+    )
+
+
+def change_ticket_status(
+    tickets: MutableSequence[TicketLike],
+    ticket_id: object,
+    new_status: object,
+) -> TicketLike:
+    """Apply one allowed workflow transition to a ticket in the collection."""
+    ticket = get_ticket_by_id(tickets, ticket_id)
+    if ticket is None:
+        raise TicketValidationError(f"No ticket found with ID {ticket_id!r}.")
+
+    if not isinstance(new_status, str):
+        raise TicketValidationError(
+            f"Unsupported status {new_status!r}. Choose one of: {', '.join(TICKET_STATUSES)}."
+        )
+    requested_status = new_status.strip().casefold()
+    if requested_status not in TICKET_STATUSES:
+        raise TicketValidationError(
+            f"Unsupported status {new_status!r}. Choose one of: {', '.join(TICKET_STATUSES)}."
+        )
+
+    current_status = _field(ticket, "status")
+    if current_status == "resolved":
+        raise TicketValidationError(
+            "Resolved tickets cannot be changed through normal workflow actions. Reopen the ticket first."
+        )
+    if current_status not in TICKET_STATUSES:
+        raise TicketValidationError(
+            f"Ticket has unsupported current status {current_status!r}."
+        )
+
+    allowed_transition = (
+        (current_status == "open" and requested_status == "in_progress")
+        or (current_status == "in_progress" and requested_status == "resolved")
+    )
+    if not allowed_transition:
+        raise TicketValidationError(
+            f"Unsupported status transition: {current_status} -> {requested_status}."
+        )
+
+    if current_status == "open" and requested_status == "in_progress":
+        assignee = _field(ticket, "assigned_to")
+        if not isinstance(assignee, str) or not assignee.strip():
+            raise TicketValidationError(
+                "An unassigned ticket cannot move to in_progress. Assign the ticket first."
+            )
+
+    for index, candidate in enumerate(tickets):
+        if candidate is ticket:
+            return _replace_ticket_status(tickets, index, requested_status)
+
+    raise TicketValidationError(f"No ticket found with ID {ticket_id!r}.")
+
+
+def reopen_ticket(
+    tickets: MutableSequence[TicketLike], ticket_id: object
+) -> TicketLike:
+    """Explicitly reopen a resolved ticket by setting its status to open."""
+    ticket = get_ticket_by_id(tickets, ticket_id)
+    if ticket is None:
+        raise TicketValidationError(f"No ticket found with ID {ticket_id!r}.")
+    if _field(ticket, "status") != "resolved":
+        raise TicketValidationError(
+            "Only resolved tickets can be reopened."
+        )
+
+    for index, candidate in enumerate(tickets):
+        if candidate is ticket:
+            return _replace_ticket_status(tickets, index, "open")
+
+    raise TicketValidationError(f"No ticket found with ID {ticket_id!r}.")
 
 
 def format_ticket_list(tickets: Iterable[TicketLike]) -> str:
