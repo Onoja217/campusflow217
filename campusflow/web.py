@@ -68,8 +68,8 @@ button,input,select{font:inherit}button{cursor:pointer;border:0;border-radius:10
 <main>
 <section class="panel">
   <div class="panel-head"><h3>All tickets</h3><span class="count" id="ticket-count">0 records</span></div>
-  <div class="toolbar"><input class="field search" id="search" placeholder="Search title, ID, or assignee…" oninput="render()"><select class="field" id="filter" onchange="render()"><option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option></select></div>
-  <div class="table-wrap"><table><thead><tr><th>Ticket</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Actions</th></tr></thead><tbody id="ticket-rows"></tbody></table></div>
+  <div class="toolbar"><input class="field search" id="search" placeholder="Search title, ID, category, or assignee…" oninput="render()"><select class="field" id="filter" onchange="render()"><option value="all">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option></select></div>
+  <div class="table-wrap"><table><thead><tr><th>Ticket</th><th>Category</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Actions</th></tr></thead><tbody id="ticket-rows"></tbody></table></div>
   <div class="empty" id="ticket-empty" hidden><strong>No tickets to show</strong>Create a ticket or adjust your filters.</div>
 </section>
 </main>
@@ -114,7 +114,7 @@ function render(){
  document.querySelector('#ticket-rows').innerHTML=visible.map(t=>{
  let action=t.status==='open'?(t.assigned_to?'<button class="small-btn" onclick="changeStatus(\''+esc(t.id)+'\',\'in_progress\')">Start</button>':'<button class="small-btn" onclick="assign(\''+esc(t.id)+'\')">Assign</button>') : t.status==='in_progress'?'<button class="small-btn" onclick="changeStatus(\''+esc(t.id)+'\',\'resolved\')">Resolve</button>':'<button class="small-btn" onclick="reopen(\''+esc(t.id)+'\')">Reopen</button>';
  if(t.status!=='resolved') action+='<button class="small-btn" onclick="assign(\''+esc(t.id)+'\')">↗</button>';
- return '<tr><td><div class="ticket-title">'+esc(t.title)+'</div><div class="ticket-id">'+esc(t.id)+' · '+esc(t.category)+' · '+esc(t.affected_users)+' users</div></td><td>'+pill(t.priority)+'</td><td>'+pill(t.status)+'</td><td class="assignee">'+esc(t.assigned_to||'Unassigned')+'</td><td><div class="row-actions">'+action+'</div></td></tr>'
+ return '<tr><td><div class="ticket-title">'+esc(t.title)+'</div><div class="ticket-id">'+esc(t.id)+' · '+esc(t.affected_users)+' users</div></td><td>'+esc(t.category)+'</td><td>'+pill(t.priority)+'</td><td>'+pill(t.status)+'</td><td class="assignee">'+esc(t.assigned_to||'Unassigned')+'</td><td><div class="row-actions">'+action+'</div></td></tr>'
  }).join('');
  const queue=tickets.filter(t=>t.status!=='resolved').sort((a,b)=>(priorityOrder[a.priority]??9)-(priorityOrder[b.priority]??9)||Number(a.id.slice(1))-Number(b.id.slice(1)));
  document.querySelector('#queue-count').textContent=queue.length+' pending · top '+Math.min(5,queue.length)+' shown';
