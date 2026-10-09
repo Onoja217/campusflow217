@@ -60,6 +60,24 @@ class BrowserTicketCreationTests(unittest.TestCase):
         self.assertEqual(result["ticket"]["title"], "Software test ticket")
         self.assertEqual(len(result["tickets"]), 1)
 
+    def test_concurrent_creates_receive_distinct_ticket_ids(self):
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(self.post_ticket, ["Hardware", "Software"]))
+
+        self.assertEqual([status for status, _ in results], [201, 201])
+        ids = [result["ticket"]["id"] for _, result in results]
+        self.assertEqual(set(ids), {"T001", "T002"})
+        with urlopen(f"{self.base_url}/api/tickets") as response:
+            stored = json.loads(response.read().decode("utf-8"))["tickets"]
+        self.assertEqual(len(stored), 2)
+        self.assertEqual({ticket["id"] for ticket in stored}, {"T001", "T002"})
+
+    def test_queue_preview_explains_limit_and_shows_category(self):
+        self.assertIn("top '+Math.min(5,queue.length)+' shown", PAGE)
+        self.assertIn("esc(t.id)+' · '+esc(t.category)+' · '+esc(t.priority)", PAGE)
+
     def test_ticket_form_does_not_call_reset_method(self):
         # Avoid the browser's form-reset call entirely; clear fields explicitly
         # only after the API confirms the ticket was created successfully.
