@@ -72,6 +72,15 @@ The dashboard uses Python's built-in HTTP server and does not require a separate
 
 The dashboard supports creating and searching tickets, filtering the list, assigning owners, changing status, reopening resolved tickets, and viewing the unresolved priority queue. If port 3000 is already in use, stop the other process before starting CampusFlow.
 
+## Troubleshooting
+
+- **The CLI does not start:** confirm Python 3.10 or newer with `python3 --version`, run the command from the repository root, and check that the package folder is named `campusflow`.
+- **The browser page does not load:** start the server with `python3 -m campusflow.web`, keep that terminal running, and open `http://localhost:3000`. If port 3000 is already occupied, stop the other local process and retry.
+- **Tickets seem to disappear after restarting:** run the app from the repository root so the relative `data/tickets.json` path resolves consistently. Check that the file exists and contains valid JSON; back it up before making manual changes.
+- **A persistence error appears:** do not delete or overwrite the data file as a first response. Make a backup, inspect the error, and validate the JSON. A malformed file should be repaired deliberately rather than silently replaced.
+- **The test suite cannot find tests:** run `python3 -m unittest discover -s tests -v` from the repository root and confirm the `tests/` directory is present.
+- **A browser action fails:** inspect the browser's displayed error and the server terminal output. Retain the reproduction steps and input values (excluding sensitive data) when reporting the issue.
+
 ## Validation and priority rules
 
 Supported categories are `Network`, `Hardware`, `Software`, and `Other`. Category matching is case-insensitive. Supported urgency values are `low`, `medium`, and `high`; urgency is normalized to lowercase. Titles cannot be blank, and affected-user counts must be positive whole numbers.
