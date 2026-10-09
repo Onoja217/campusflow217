@@ -1,6 +1,6 @@
 # CampusFlow CLI
 
-CampusFlow is a command-line helpdesk ticket tracker with validated ticket creation, priority calculation, sequential IDs, listing, and ticket detail views.
+CampusFlow is a command-line helpdesk ticket tracker with validated ticket creation, priority calculation, sequential IDs, listing, ticket details, assignment, status transitions, and local JSON persistence.
 
 ## Requirements
 
@@ -15,7 +15,13 @@ From the repository root:
 python -m campusflow.cli
 ```
 
-Use the menu to create, list, and view tickets; assign a ticket; change its status; or explicitly reopen a resolved ticket. New tickets start as `open`. Assign a ticket before moving it to `in_progress`; move it from `in_progress` to `resolved` when work is complete. Resolved tickets reject normal changes until explicitly reopened. The CLI keeps tickets in memory for the current process; durable persistence is intentionally left to a separate feature.
+CampusFlow stores tickets in `data/tickets.json` by default. The directory and file are created when the first ticket is saved. Tickets remain available on the next launch, including their assignee and status. If the file is missing, CampusFlow starts with an empty collection. If the file contains invalid JSON or invalid ticket data, the CLI stops with a clear error rather than overwriting the file.
+
+The persistence module accepts an explicit path, which is useful for tests or embedding the CLI: `main(tickets_path)`. The current CLI default is repository-relative; run CampusFlow from the project root to use the expected `data/tickets.json` location.
+
+Use the menu to create, list, and view tickets; assign a ticket; change its status; or explicitly reopen a resolved ticket. New tickets start as `open`. Assign a ticket before moving it to `in_progress`; move it from `in_progress` to `resolved` when work is complete. Resolved tickets reject normal changes until explicitly reopened.
+
+Ticket writes use a temporary file and atomic replacement. If a write fails, CampusFlow reports the persistence error and rolls back the in-memory mutation instead of claiming it was saved.
 
 ## Run tests
 
@@ -38,4 +44,4 @@ Rules are evaluated in this order:
 3. Otherwise, medium urgency or at least 3 affected users → `medium`
 4. Otherwise → `low`
 
-The allowed categories, urgency levels, validation, priority calculation, ID generation, lookup, and formatting are centralized in `campusflow/tickets.py`.
+The allowed categories, urgency levels, validation, priority calculation, ID generation, lookup, and formatting are centralized in `campusflow/tickets.py`. JSON file validation and atomic storage are centralized in `campusflow/persistence.py`.
