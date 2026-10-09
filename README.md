@@ -26,7 +26,7 @@ From the repository root:
 python -m campusflow.cli
 ```
 
-Choose an action from the interactive menu:
+### Browser-based UI (local development)\n\nCampusFlow also includes a browser dashboard served by Python's standard library; no frontend package installation is required. From the repository root, run:\n\n```bash\npython3 -m campusflow.web\n```\n\nThen open [http://localhost:3000](http://localhost:3000). The dashboard supports creating tickets, viewing and filtering tickets, assigning owners, moving tickets through the supported status workflow, reopening resolved tickets, and reviewing the unresolved priority queue. It uses the same ticket rules and the same `data/tickets.json` file as the CLI. Stop the server with `Ctrl+C`.\n\nChoose an action from the interactive menu:
 
 | Option | Action |
 | --- | --- |
