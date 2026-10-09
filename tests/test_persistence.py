@@ -6,7 +6,11 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from campusflow.persistence import TicketPersistenceError, load_tickets, save_tickets
+from campusflow.persistence import (
+    TicketPersistenceError,
+    load_tickets,
+    save_tickets,
+)
 from campusflow.tickets import Ticket, create_ticket
 
 
@@ -20,8 +24,13 @@ class TicketPersistenceTests(unittest.TestCase):
     def make_ticket(self, tickets=None, title="Wi-Fi unavailable"):
         if tickets is None:
             tickets = []
-        return create_ticket(tickets, title=title, category="Network",
-                             urgency="high", affected_users=10)
+        return create_ticket(
+            tickets,
+            title=title,
+            category="Network",
+            urgency="high",
+            affected_users=10,
+        )
 
     def test_missing_file_loads_as_empty_collection(self):
         self.assertEqual(load_tickets(self.path), [])
@@ -29,9 +38,12 @@ class TicketPersistenceTests(unittest.TestCase):
     def test_save_and_load_round_trip_all_fields_and_unicode(self):
         tickets = []
         ticket = self.make_ticket(tickets, title="Wi-Fi — ห้องเรียน")
+        from dataclasses import replace
         tickets[0] = replace(ticket, assigned_to="Ada Okafor", status="in_progress")
+
         save_tickets(tickets, self.path)
         loaded = load_tickets(self.path)
+
         self.assertEqual([item.to_dict() for item in loaded],
                          [item.to_dict() for item in tickets])
         self.assertIn("ห้องเรียน", self.path.read_text(encoding="utf-8"))
@@ -59,10 +71,14 @@ class TicketPersistenceTests(unittest.TestCase):
         missing = dict(ticket)
         del missing["assigned_to"]
         cases.append(("missing field", [missing]))
-        cases.append(("extra field", [dict(ticket, extra="unexpected")]))
-        cases.append(("invalid integer", [dict(ticket, affected_users=True)]))
-        cases.append(("invalid assignee", [dict(ticket, assigned_to=42)]))
-        cases.append(("invalid status", [dict(ticket, status="waiting")]))
+        extra = dict(ticket, extra="unexpected")
+        cases.append(("extra field", [extra]))
+        wrong_users = dict(ticket, affected_users=True)
+        cases.append(("invalid integer", [wrong_users]))
+        wrong_assignee = dict(ticket, assigned_to=42)
+        cases.append(("invalid assignee", [wrong_assignee]))
+        wrong_status = dict(ticket, status="waiting")
+        cases.append(("invalid status", [wrong_status]))
         for label, payload in cases:
             with self.subTest(label=label):
                 self.path.write_text(json.dumps(payload), encoding="utf-8")
@@ -80,7 +96,11 @@ class TicketPersistenceTests(unittest.TestCase):
         first = self.make_ticket(tickets, title="First")
         second = self.make_ticket(tickets, title="Second")
         third = self.make_ticket(tickets, title="Third")
-        tickets[:] = [replace(third, id="T010"), replace(second, id="T002"), first]
+        tickets[:] = [
+            replace(third, id="T010"),
+            replace(second, id="T002"),
+            first,
+        ]
         save_tickets(tickets, self.path)
 
         restored = load_tickets(self.path)
@@ -100,8 +120,7 @@ class TicketPersistenceTests(unittest.TestCase):
     def test_atomic_replace_failure_preserves_previous_file(self):
         self.path.write_text('[{"previous":"valid"}]\n', encoding="utf-8")
         previous = self.path.read_text(encoding="utf-8")
-        with patch("campusflow.persistence.os.replace",
-                   side_effect=OSError("simulated replace failure")):
+        with patch("campusflow.persistence.os.replace", side_effect=OSError("simulated replace failure")):
             with self.assertRaisesRegex(TicketPersistenceError, "Cannot safely save"):
                 save_tickets([self.make_ticket()], self.path)
         self.assertEqual(self.path.read_text(encoding="utf-8"), previous)
