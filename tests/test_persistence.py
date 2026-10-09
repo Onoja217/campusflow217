@@ -2,6 +2,7 @@
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -37,7 +38,6 @@ class TicketPersistenceTests(unittest.TestCase):
     def test_save_and_load_round_trip_all_fields_and_unicode(self):
         tickets = []
         ticket = self.make_ticket(tickets, title="Wi-Fi — ห้องเรียน")
-        from dataclasses import replace
         tickets[0] = replace(ticket, assigned_to="Ada Okafor", status="in_progress")
 
         save_tickets(tickets, self.path)
@@ -89,6 +89,26 @@ class TicketPersistenceTests(unittest.TestCase):
         self.path.write_text(json.dumps([record, record]), encoding="utf-8")
         with self.assertRaisesRegex(TicketPersistenceError, "duplicate ID"):
             load_tickets(self.path)
+
+    def test_id_generation_continues_after_reload_from_highest_id_not_last_record(self):
+        tickets = []
+        first = self.make_ticket(tickets, title="First")
+        second = self.make_ticket(tickets, title="Second")
+        third = self.make_ticket(tickets, title="Third")
+        tickets[:] = [
+            replace(third, id="T010"),
+            replace(second, id="T002"),
+            first,
+        ]
+        save_tickets(tickets, self.path)
+
+        restored = load_tickets(self.path)
+        next_ticket = self.make_ticket(restored, title="Created after reload")
+
+        self.assertEqual([ticket.id for ticket in restored], ["T010", "T002", "T001"])
+        self.assertEqual(next_ticket.id, "T011")
+        self.assertEqual(len({ticket.id for ticket in restored}), len(restored))
+        self.assertEqual(len({ticket.id for ticket in restored + [next_ticket]}), 4)
 
     def test_invalid_records_cannot_be_saved(self):
         invalid = Ticket("T001", "", "Network", "low", 1, "low", "open", None)
