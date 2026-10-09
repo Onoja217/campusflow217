@@ -13,7 +13,7 @@ from typing import Iterable, Mapping, MutableSequence, TypeAlias
 CATEGORIES = ("Network", "Hardware", "Software", "Other")
 URGENCY_LEVELS = ("low", "medium", "high")
 PRIORITIES = ("low", "medium", "high", "critical")
-TICKET_ID_PATTERN = re.compile(r"^T(\\d+)$")
+TICKET_ID_PATTERN = re.compile(r"^T(\d+)$")
 DETAIL_FIELDS = (
     ("id", "ID"),
     ("title", "Title"),
@@ -216,12 +216,12 @@ def format_ticket_list(tickets: Iterable[TicketLike]) -> str:
         value.ljust(widths[index]) for index, value in enumerate(values)
     )
     divider = "-+-".join("-" * width for width in widths)
-    return "\\n".join([render(headers), divider, *(render(row) for row in rows)])
+    return "\n".join([render(headers), divider, *(render(row) for row in rows)])
 
 
 def format_ticket_details(ticket: TicketLike) -> str:
     """Format all eight fields of a ticket with human-readable labels."""
-    return "\\n".join(
+    return "\n".join(
         f"{label}: {_display_value(_field(ticket, key))}"
         for key, label in DETAIL_FIELDS
     )
