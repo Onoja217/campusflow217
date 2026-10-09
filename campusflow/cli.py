@@ -153,10 +153,10 @@ def main(tickets_path: str | PathLike[str] = DEFAULT_TICKETS_PATH) -> None:
                 except TicketValidationError as error:
                     print(f"Error: {error}")
             elif choice == "7":
-                show_priority_queue(tickets)
-            elif choice == "8":
                 print("CampusFlow closed.")
                 return
+            elif choice == "8":
+                show_priority_queue(tickets)
             else:
                 print("Invalid option. Choose 1, 2, 3, 4, 5, 6, 7, or 8.")
     except (EOFError, KeyboardInterrupt):
