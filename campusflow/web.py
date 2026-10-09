@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import threading
 from urllib.parse import unquote, urlparse
 
 from .persistence import (
@@ -27,6 +28,8 @@ from .tickets import (
 
 HOST = "127.0.0.1"
 PORT = 3000
+
+_TICKET_WRITE_LOCK = threading.RLock()
 
 PAGE = r"""<!doctype html>
 <html lang="en">
@@ -114,11 +117,11 @@ function render(){
  return '<tr><td><div class="ticket-title">'+esc(t.title)+'</div><div class="ticket-id">'+esc(t.id)+' · '+esc(t.category)+' · '+esc(t.affected_users)+' users</div></td><td>'+pill(t.priority)+'</td><td>'+pill(t.status)+'</td><td class="assignee">'+esc(t.assigned_to||'Unassigned')+'</td><td><div class="row-actions">'+action+'</div></td></tr>'
  }).join('');
  const queue=tickets.filter(t=>t.status!=='resolved').sort((a,b)=>(priorityOrder[a.priority]??9)-(priorityOrder[b.priority]??9)||Number(a.id.slice(1))-Number(b.id.slice(1)));
- document.querySelector('#queue-count').textContent=queue.length+' pending';
- document.querySelector('#queue-list').innerHTML=queue.slice(0,5).map((t,i)=>'<div class="queue-item"><div class="queue-rank">'+String(i+1).padStart(2,'0')+'</div><div class="queue-meta"><strong>'+esc(t.title)+'</strong><span>'+esc(t.id)+' · '+esc(t.priority)+' priority</span></div>'+pill(t.priority)+'</div>').join('') || '<div class="empty">No unresolved tickets.</div>';
+ document.querySelector('#queue-count').textContent=queue.length+' pending · top '+Math.min(5,queue.length)+' shown';
+ document.querySelector('#queue-list').innerHTML=queue.slice(0,5).map((t,i)=>'<div class="queue-item"><div class="queue-rank">'+String(i+1).padStart(2,'0')+'</div><div class="queue-meta"><strong>'+esc(t.title)+'</strong><span>'+esc(t.id)+' · '+esc(t.category)+' · '+esc(t.priority)+' priority</span></div>'+pill(t.priority)+'</div>').join('') || '<div class="empty">No unresolved tickets.</div>';
 }
 async function refresh(){try{const data=await api('/tickets');tickets=data.tickets;render()}catch(e){notify(e.message,true)}}
-const createForm=document.querySelector('#create-form');createForm.addEventListener('submit',async e=>{e.preventDefault();const form=new FormData(createForm);const payload=Object.fromEntries(form.entries());payload.affected_users=Number(payload.affected_users);const submitButton=createForm.querySelector('button[type="submit"]');submitButton.disabled=true;try{const data=await api('/tickets',{method:'POST',body:JSON.stringify(payload)});tickets=data.tickets;document.querySelector('#ticket-title').value='';document.querySelector('#category').value='Network';document.querySelector('#affected').value='1';document.querySelector('#urgency').value='medium';render();notify('Created '+data.ticket.id+' · '+data.ticket.priority+' priority')}catch(err){notify(err.message,true)}finally{submitButton.disabled=false}});
+const createForm=document.querySelector('#create-form');createForm.addEventListener('submit',async e=>{e.preventDefault();if(createForm.dataset.submitting==='true')return;const form=new FormData(createForm);const payload=Object.fromEntries(form.entries());payload.title=String(payload.title||'').trim();payload.affected_users=Number(payload.affected_users);const existingIds=new Set(tickets.map(t=>t.id));const submitButton=createForm.querySelector('button[type="submit"]');createForm.dataset.submitting='true';submitButton.disabled=true;try{const data=await api('/tickets',{method:'POST',body:JSON.stringify(payload)});tickets=data.tickets;document.querySelector('#ticket-title').value='';document.querySelector('#category').value='Network';document.querySelector('#affected').value='1';document.querySelector('#urgency').value='medium';render();notify('Created '+data.ticket.id+' · '+data.ticket.priority+' priority')}catch(err){try{const refreshed=await api('/tickets');const matches=refreshed.tickets.filter(t=>!existingIds.has(t.id)&&t.title===payload.title&&t.category===payload.category&&t.urgency===payload.urgency&&t.affected_users===payload.affected_users);tickets=refreshed.tickets;render();if(matches.length){document.querySelector('#ticket-title').value='';document.querySelector('#category').value='Network';document.querySelector('#affected').value='1';document.querySelector('#urgency').value='medium';notify('Ticket '+matches[0].id+' was saved; the list was refreshed to prevent a duplicate retry.')}else{notify(err.message,true)}}catch(refreshError){notify(err.message+' Ticket status could not be verified; check the ticket list before retrying.',true)}}finally{createForm.dataset.submitting='false';submitButton.disabled=false}});
 async function assign(id){const assignee=prompt('Assign '+id+' to (person or team):');if(assignee===null)return;try{const data=await api('/tickets/'+encodeURIComponent(id)+'/assign',{method:'POST',body:JSON.stringify({assignee})});tickets=data.tickets;render();notify(id+' assigned to '+assignee.trim())}catch(e){notify(e.message,true)}}
 async function changeStatus(id,status){try{const data=await api('/tickets/'+encodeURIComponent(id)+'/status',{method:'POST',body:JSON.stringify({status})});tickets=data.tickets;render();notify(id+' moved to '+pretty(status))}catch(e){notify(e.message,true)}}
 async function reopen(id){try{const data=await api('/tickets/'+encodeURIComponent(id)+'/reopen',{method:'POST',body:'{}'});tickets=data.tickets;render();notify(id+' reopened')}catch(e){notify(e.message,true)}}
@@ -187,6 +190,12 @@ class CampusFlowHandler(BaseHTTPRequestHandler):
         self._send(404, {"error": "Not found."})
 
     def do_POST(self) -> None:
+        # ThreadingHTTPServer can receive simultaneous creates. Serialize the
+        # read-modify-write sequence so two requests cannot allocate the same ID.
+        with _TICKET_WRITE_LOCK:
+            self._do_post_locked()
+
+    def _do_post_locked(self) -> None:
         path = unquote(urlparse(self.path).path)
         try:
             payload = self._body()
