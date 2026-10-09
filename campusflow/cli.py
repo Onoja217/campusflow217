@@ -10,6 +10,7 @@ from .persistence import (
     save_tickets,
 )
 from .priority_queue import prioritized_tickets
+from .reports import build_ticket_report
 from .tickets import (
     Ticket,
     TicketValidationError,
@@ -84,6 +85,18 @@ def show_priority_queue(tickets: list[Ticket]) -> None:
     print(format_ticket_list(queue))
 
 
+def show_ticket_report(tickets: list[Ticket]) -> None:
+    """Print workload totals by status and priority."""
+    report = build_ticket_report(tickets)
+    print(f"Total tickets: {report['total']}")
+    print("\nBy status:")
+    for status, count in report["by_status"].items():
+        print(f"  {status}: {count}")
+    print("\nBy priority:")
+    for priority, count in report["by_priority"].items():
+        print(f"  {priority}: {count}")
+
+
 def show_ticket_by_id(tickets: list[Ticket], ticket_id: str) -> None:
     """Print one ticket's details or a friendly not-found message."""
     if not tickets:
@@ -116,6 +129,7 @@ def main(tickets_path: str | PathLike[str] = DEFAULT_TICKETS_PATH) -> None:
                 "\n1. Create ticket\n2. List all tickets\n3. View ticket by ID"
                 "\n4. Assign ticket\n5. Change ticket status\n6. Reopen resolved ticket"
                 "\n7. Exit\n8. Show unresolved priority queue"
+                "\n9. Show ticket report"
             )
             choice = input("Choose an option: ").strip()
             if choice == "1":
@@ -157,8 +171,10 @@ def main(tickets_path: str | PathLike[str] = DEFAULT_TICKETS_PATH) -> None:
                 return
             elif choice == "8":
                 show_priority_queue(tickets)
+            elif choice == "9":
+                show_ticket_report(tickets)
             else:
-                print("Invalid option. Choose 1, 2, 3, 4, 5, 6, 7, or 8.")
+                print("Invalid option. Choose 1, 2, 3, 4, 5, 6, 7, 8, or 9.")
     except (EOFError, KeyboardInterrupt):
         print("\nCampusFlow closed.")
 
