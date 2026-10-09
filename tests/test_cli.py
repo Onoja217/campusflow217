@@ -123,7 +123,7 @@ class InteractiveCliTests(unittest.TestCase):
     def test_invalid_menu_option_keeps_cli_running(self):
         output = self.run_cli(["x", "7"])
 
-        self.assertIn("Invalid option. Choose 1, 2, 3, 4, 5, 6, or 7.", output)
+        self.assertIn("Invalid option. Choose 1, 2, 3, 4, 5, 6, 7, or 8.", output)
         self.assertIn("CampusFlow closed.", output)
 
     def test_eof_exits_cleanly(self):
