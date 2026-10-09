@@ -1,1 +1,39 @@
-# campusflow217
+# CampusFlow CLI
+
+CampusFlow is a command-line ticket tracker. The initial feature provides validated ticket creation, priority calculation, and sequential IDs.
+
+## Requirements
+
+- Python 3.10 or newer
+- No third-party runtime dependencies
+
+## Run the CLI
+
+From the repository root:
+
+```bash
+python -m campusflow.cli
+```
+
+The F1 CLI stores tickets in memory for the current process. Durable JSON persistence is intentionally left to the separate persistence feature.
+
+## Run tests
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+## Ticket fields
+
+Each ticket contains exactly these eight fields: `id`, `title`, `category`, `urgency`, `affected_users`, `priority`, `status`, and `assigned_to`.
+
+## Priority rules
+
+Rules are evaluated in this order:
+
+1. High urgency and at least 10 affected users → `critical`
+2. Otherwise, high urgency or at least 10 affected users → `high`
+3. Otherwise, medium urgency or at least 3 affected users → `medium`
+4. Otherwise → `low`
+
+The allowed categories, urgency levels, validation, priority calculation, and ID generation are centralized in `campusflow/tickets.py`.
