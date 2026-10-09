@@ -25,7 +25,7 @@ class InteractiveCliTests(unittest.TestCase):
             "2",
             "3",
             " T001 ",
-            "4",
+            "7",
         ])
 
         self.assertIn("Created T001: Wi-Fi unavailable", output)
@@ -37,15 +37,39 @@ class InteractiveCliTests(unittest.TestCase):
         self.assertIn("Assigned to: Unassigned", output)
         self.assertIn("CampusFlow closed.", output)
 
+    def test_cli_can_assign_ticket_and_show_assignee(self):
+        output = self.run_cli([
+            "1", "Wi-Fi unavailable", "Network", "high", "10",
+            "4", " T001 ", "  Ada Okafor  ",
+            "2", "3", "T001", "7",
+        ])
+
+        self.assertIn("Assigned T001 to Ada Okafor.", output)
+        self.assertIn("Ada Okafor", output)
+        self.assertIn("Assigned to: Ada Okafor", output)
+
+    def test_cli_assignment_errors_are_friendly_and_recoverable(self):
+        output = self.run_cli([
+            "1", "Wi-Fi unavailable", "Network", "high", "10",
+            "4", "T001", "   ",
+            "4", "T999", "Ada",
+            "2", "7",
+        ])
+
+        self.assertIn("Error: Assignee cannot be blank.", output)
+        self.assertIn("Error: No ticket found with ID 'T999'.", output)
+        self.assertIn("Unassigned", output)
+        self.assertIn("CampusFlow closed.", output)
+
     def test_empty_list_and_lookup_are_friendly(self):
-        output = self.run_cli(["2", "3", "T001", "4"])
+        output = self.run_cli(["2", "3", "T001", "7"])
 
         self.assertGreaterEqual(output.count("No tickets found."), 2)
         self.assertIn("CampusFlow closed.", output)
 
     def test_unknown_and_blank_ticket_ids_are_friendly(self):
         output = self.run_cli(["1", "Projector broken", "Hardware", "low", "2",
-                               "3", "T999", "3", "   ", "4"])
+                               "3", "T999", "3", "   ", "7"])
 
         self.assertIn("No ticket found with ID T999.", output)
         self.assertIn("Please enter a ticket ID.", output)
@@ -53,7 +77,7 @@ class InteractiveCliTests(unittest.TestCase):
 
     def test_invalid_ticket_does_not_break_session_or_create_record(self):
         output = self.run_cli(["1", "   ", "Network", "low", "1",
-                               "2", "4"])
+                               "2", "7"])
 
         self.assertIn("Error:", output)
         self.assertIn("No tickets found.", output)
@@ -61,9 +85,9 @@ class InteractiveCliTests(unittest.TestCase):
         self.assertNotIn("Created T001", output)
 
     def test_invalid_menu_option_keeps_cli_running(self):
-        output = self.run_cli(["x", "4"])
+        output = self.run_cli(["x", "7"])
 
-        self.assertIn("Invalid option. Choose 1, 2, 3, or 4.", output)
+        self.assertIn("Invalid option. Choose 1, 2, 3, 4, 5, 6, or 7.", output)
         self.assertIn("CampusFlow closed.", output)
 
     def test_eof_exits_cleanly(self):
