@@ -9,6 +9,7 @@ from .persistence import (
     load_tickets,
     save_tickets,
 )
+from .priority_queue import prioritized_tickets
 from .tickets import (
     Ticket,
     TicketValidationError,
@@ -74,6 +75,15 @@ def show_tickets(tickets: list[Ticket]) -> None:
     print(format_ticket_list(tickets))
 
 
+def show_priority_queue(tickets: list[Ticket]) -> None:
+    """Print unresolved tickets in recommended handling order."""
+    queue = prioritized_tickets(tickets)
+    if not queue:
+        print("No unresolved tickets.")
+        return
+    print(format_ticket_list(queue))
+
+
 def show_ticket_by_id(tickets: list[Ticket], ticket_id: str) -> None:
     """Print one ticket's details or a friendly not-found message."""
     if not tickets:
@@ -105,7 +115,7 @@ def main(tickets_path: str | PathLike[str] = DEFAULT_TICKETS_PATH) -> None:
             print(
                 "\n1. Create ticket\n2. List all tickets\n3. View ticket by ID"
                 "\n4. Assign ticket\n5. Change ticket status\n6. Reopen resolved ticket"
-                "\n7. Exit"
+                "\n7. Exit\n8. Show unresolved priority queue"
             )
             choice = input("Choose an option: ").strip()
             if choice == "1":
@@ -145,8 +155,10 @@ def main(tickets_path: str | PathLike[str] = DEFAULT_TICKETS_PATH) -> None:
             elif choice == "7":
                 print("CampusFlow closed.")
                 return
+            elif choice == "8":
+                show_priority_queue(tickets)
             else:
-                print("Invalid option. Choose 1, 2, 3, 4, 5, 6, or 7.")
+                print("Invalid option. Choose 1, 2, 3, 4, 5, 6, 7, or 8.")
     except (EOFError, KeyboardInterrupt):
         print("\nCampusFlow closed.")
 
