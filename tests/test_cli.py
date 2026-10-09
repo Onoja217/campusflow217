@@ -1,6 +1,8 @@
 """End-to-end regression tests for the interactive CampusFlow CLI."""
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -8,11 +10,15 @@ from campusflow.cli import main
 
 
 class InteractiveCliTests(unittest.TestCase):
-    def run_cli(self, inputs):
+    def run_cli(self, inputs, tickets_path=None):
+        if tickets_path is None:
+            temporary_directory = tempfile.TemporaryDirectory()
+            self.addCleanup(temporary_directory.cleanup)
+            tickets_path = Path(temporary_directory.name) / "tickets.json"
         output = StringIO()
         with patch("builtins.input", side_effect=inputs):
             with redirect_stdout(output):
-                main()
+                main(tickets_path)
         return output.getvalue()
 
     def test_create_list_and_view_ticket_in_one_session(self):
@@ -61,6 +67,36 @@ class InteractiveCliTests(unittest.TestCase):
         self.assertIn("Unassigned", output)
         self.assertIn("CampusFlow closed.", output)
 
+    def test_tickets_persist_between_separate_cli_runs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tickets.json"
+            first = self.run_cli([
+                "1", "Wi-Fi unavailable", "Network", "high", "10",
+                "4", "T001", "Ada Okafor",
+                "5", "T001", "in_progress",
+                "7",
+            ], path)
+            second = self.run_cli(["2", "3", "T001", "7"], path)
+
+        self.assertIn("Created T001: Wi-Fi unavailable", first)
+        self.assertIn("Assigned T001 to Ada Okafor.", first)
+        self.assertIn("T001 status changed to in_progress.", first)
+        self.assertIn("Ada Okafor", second)
+        self.assertIn("Status: in_progress", second)
+        self.assertIn("ID: T001", second)
+
+    def test_corrupt_persistence_file_stops_without_overwriting_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tickets.json"
+            original = "this is not JSON"
+            path.write_text(original, encoding="utf-8")
+            output = self.run_cli(["1", "Should not create", "Network", "low", "1", "7"], path)
+            self.assertEqual(path.read_text(encoding="utf-8"), original)
+
+        self.assertIn("Persistence error:", output)
+        self.assertIn("stopped to protect", output)
+        self.assertNotIn("Created T001", output)
+
     def test_empty_list_and_lookup_are_friendly(self):
         output = self.run_cli(["2", "3", "T001", "7"])
 
@@ -92,16 +128,16 @@ class InteractiveCliTests(unittest.TestCase):
 
     def test_eof_exits_cleanly(self):
         output = StringIO()
-        with patch("builtins.input", side_effect=EOFError), redirect_stdout(output):
-            main()
-
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("builtins.input", side_effect=EOFError), redirect_stdout(output):
+                main(Path(directory) / "tickets.json")
         self.assertIn("CampusFlow closed.", output.getvalue())
 
     def test_keyboard_interrupt_exits_cleanly(self):
         output = StringIO()
-        with patch("builtins.input", side_effect=KeyboardInterrupt), redirect_stdout(output):
-            main()
-
+        with tempfile.TemporaryDirectory() as directory:
+            with patch("builtins.input", side_effect=KeyboardInterrupt), redirect_stdout(output):
+                main(Path(directory) / "tickets.json")
         self.assertIn("CampusFlow closed.", output.getvalue())
 
 
