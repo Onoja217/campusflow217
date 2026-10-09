@@ -1,6 +1,12 @@
 """Tests for ticket reports, including empty and mixed workloads."""
+from contextlib import redirect_stdout
+from io import StringIO
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from campusflow.cli import main, show_ticket_report
 from campusflow.reports import build_ticket_report
 from campusflow.tickets import PRIORITIES, TICKET_STATUSES, Ticket
 
@@ -55,6 +61,31 @@ class TicketReportTests(unittest.TestCase):
         self.assertEqual(report["by_priority"]["critical"], 0)
         self.assertEqual(report["by_priority"]["high"], 0)
         self.assertEqual(report["by_priority"]["medium"], 0)
+
+    def test_cli_displays_zero_ticket_report_without_crashing(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            show_ticket_report([])
+
+        rendered = output.getvalue()
+        self.assertIn("Total tickets: 0", rendered)
+        for status in TICKET_STATUSES:
+            self.assertIn(f"{status}: 0", rendered)
+        for priority in PRIORITIES:
+            self.assertIn(f"{priority}: 0", rendered)
+
+    def test_menu_can_display_report_for_empty_store(self):
+        output = StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tickets.json"
+            with patch("builtins.input", side_effect=["9", "7"]):
+                with redirect_stdout(output):
+                    main(path)
+
+        rendered = output.getvalue()
+        self.assertIn("9. Show ticket report", rendered)
+        self.assertIn("Total tickets: 0", rendered)
+        self.assertIn("CampusFlow closed.", rendered)
 
 
 if __name__ == "__main__":
