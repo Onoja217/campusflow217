@@ -66,7 +66,7 @@ def main() -> None:
     print("CampusFlow ticket tracker")
     try:
         while True:
-            print("\\n1. Create ticket\\n2. List all tickets\\n3. View ticket by ID\\n4. Exit")
+            print("\n1. Create ticket\n2. List all tickets\n3. View ticket by ID\n4. Exit")
             choice = input("Choose an option: ").strip()
             if choice == "1":
                 prompt_for_ticket(tickets)
@@ -80,7 +80,7 @@ def main() -> None:
             else:
                 print("Invalid option. Choose 1, 2, 3, or 4.")
     except (EOFError, KeyboardInterrupt):
-        print("\\nCampusFlow closed.")
+        print("\nCampusFlow closed.")
 
 
 if __name__ == "__main__":
