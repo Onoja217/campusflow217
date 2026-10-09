@@ -198,6 +198,35 @@ def get_ticket_by_id(
     return None
 
 
+def assign_ticket(
+    tickets: MutableSequence[TicketLike], ticket_id: object, assignee: object
+) -> TicketLike:
+    """Assign an open ticket to a non-blank person or team name."""
+    ticket = get_ticket_by_id(tickets, ticket_id)
+    if ticket is None:
+        raise TicketValidationError(f"No ticket found with ID {ticket_id!r}.")
+    if _field(ticket, "status") == "resolved":
+        raise TicketValidationError(
+            "Resolved tickets cannot be modified. Reopen the ticket first."
+        )
+    if not isinstance(assignee, str) or not assignee.strip():
+        raise TicketValidationError("Assignee cannot be blank.")
+
+    for index, candidate in enumerate(tickets):
+        if candidate is ticket:
+            if isinstance(ticket, Ticket):
+                updated_ticket = replace(ticket, assigned_to=assignee.strip())
+                tickets[index] = updated_ticket
+                return updated_ticket
+            if isinstance(ticket, MutableMapping):
+                ticket["assigned_to"] = assignee.strip()
+                return ticket
+            raise TicketValidationError(
+                "This ticket record cannot be updated because it is read-only."
+            )
+    raise TicketValidationError(f"No ticket found with ID {ticket_id!r}.")
+
+
 def _replace_ticket_status(
     tickets: MutableSequence[TicketLike], index: int, status: str
 ) -> TicketLike:
