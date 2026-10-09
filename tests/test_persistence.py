@@ -79,6 +79,10 @@ class TicketPersistenceTests(unittest.TestCase):
         cases.append(("invalid assignee", [wrong_assignee]))
         wrong_status = dict(ticket, status="waiting")
         cases.append(("invalid status", [wrong_status]))
+        wrong_priority = dict(ticket, priority="low")
+        cases.append(("priority inconsistent with business rules", [wrong_priority]))
+        unassigned_in_progress = dict(ticket, status="in_progress", assigned_to=None)
+        cases.append(("in-progress ticket without assignee", [unassigned_in_progress]))
         for label, payload in cases:
             with self.subTest(label=label):
                 self.path.write_text(json.dumps(payload), encoding="utf-8")
