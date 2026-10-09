@@ -115,7 +115,7 @@ def main(tickets_path: str | PathLike[str] = DEFAULT_TICKETS_PATH) -> None:
             print(
                 "\n1. Create ticket\n2. List all tickets\n3. View ticket by ID"
                 "\n4. Assign ticket\n5. Change ticket status\n6. Reopen resolved ticket"
-                "\n7. Show unresolved priority queue\n8. Exit"
+                "\n7. Exit\n8. Show unresolved priority queue"
             )
             choice = input("Choose an option: ").strip()
             if choice == "1":
