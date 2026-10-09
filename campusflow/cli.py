@@ -4,11 +4,14 @@ from __future__ import annotations
 from .tickets import (
     Ticket,
     TicketValidationError,
+    assign_ticket,
+    change_ticket_status,
     create_ticket,
     format_ticket_details,
     format_ticket_list,
     get_ticket_by_id,
     parse_affected_users_input,
+    reopen_ticket,
 )
 
 
@@ -66,7 +69,11 @@ def main() -> None:
     print("CampusFlow ticket tracker")
     try:
         while True:
-            print("\n1. Create ticket\n2. List all tickets\n3. View ticket by ID\n4. Exit")
+            print(
+                "\n1. Create ticket\n2. List all tickets\n3. View ticket by ID"
+                "\n4. Assign ticket\n5. Change ticket status\n6. Reopen resolved ticket"
+                "\n7. Exit"
+            )
             choice = input("Choose an option: ").strip()
             if choice == "1":
                 prompt_for_ticket(tickets)
@@ -75,10 +82,32 @@ def main() -> None:
             elif choice == "3":
                 show_ticket_by_id(tickets, input("Ticket ID: "))
             elif choice == "4":
+                try:
+                    ticket_id = input("Ticket ID to assign: ")
+                    assignee = input("Assignee name: ")
+                    ticket = assign_ticket(tickets, ticket_id, assignee)
+                    print(f"Assigned {ticket.id} to {ticket.assigned_to}.")
+                except TicketValidationError as error:
+                    print(f"Error: {error}")
+            elif choice == "5":
+                try:
+                    ticket_id = input("Ticket ID: ")
+                    new_status = input("New status (in_progress/resolved): ")
+                    ticket = change_ticket_status(tickets, ticket_id, new_status)
+                    print(f"{ticket.id} status changed to {ticket.status}.")
+                except TicketValidationError as error:
+                    print(f"Error: {error}")
+            elif choice == "6":
+                try:
+                    ticket = reopen_ticket(tickets, input("Ticket ID to reopen: "))
+                    print(f"{ticket.id} reopened and set to open.")
+                except TicketValidationError as error:
+                    print(f"Error: {error}")
+            elif choice == "7":
                 print("CampusFlow closed.")
                 return
             else:
-                print("Invalid option. Choose 1, 2, 3, or 4.")
+                print("Invalid option. Choose 1, 2, 3, 4, 5, 6, or 7.")
     except (EOFError, KeyboardInterrupt):
         print("\nCampusFlow closed.")
 
