@@ -1,8 +1,8 @@
-"""Ticket creation and validation for CampusFlow.
+"""Ticket creation, validation, lookup, and presentation for CampusFlow.
 
 Business rules live here so the CLI and automated tests use the same logic.
 The caller supplies the current ticket collection, which is the source of
-truth for sequential ID generation.
+truth for sequential ID generation and ticket views.
 """
 from __future__ import annotations
 
@@ -13,7 +13,24 @@ from typing import Iterable, Mapping, MutableSequence, TypeAlias
 CATEGORIES = ("Network", "Hardware", "Software", "Other")
 URGENCY_LEVELS = ("low", "medium", "high")
 PRIORITIES = ("low", "medium", "high", "critical")
-TICKET_ID_PATTERN = re.compile(r"^T(\d+)$")
+TICKET_ID_PATTERN = re.compile(r"^T(\\d+)$")
+DETAIL_FIELDS = (
+    ("id", "ID"),
+    ("title", "Title"),
+    ("category", "Category"),
+    ("urgency", "Urgency"),
+    ("affected_users", "Affected users"),
+    ("priority", "Priority"),
+    ("status", "Status"),
+    ("assigned_to", "Assigned to"),
+)
+LIST_FIELDS = (
+    ("id", "ID"),
+    ("title", "Title"),
+    ("priority", "Priority"),
+    ("status", "Status"),
+    ("assigned_to", "Assignee"),
+)
 
 
 class TicketValidationError(ValueError):
@@ -108,9 +125,15 @@ def calculate_priority(urgency: str, affected_users: int) -> str:
 
 
 def _field(ticket: TicketLike, name: str) -> object:
+    """Read a field from either the canonical dataclass or a mapping."""
     if isinstance(ticket, Ticket):
         return getattr(ticket, name)
     return ticket.get(name)
+
+
+def _display_value(value: object) -> str:
+    """Convert a stored value into readable CLI text."""
+    return "Unassigned" if value is None or value == "" else str(value)
 
 
 def next_ticket_id(tickets: Iterable[TicketLike]) -> str:
@@ -134,11 +157,7 @@ def create_ticket(
     urgency: object,
     affected_users: object,
 ) -> Ticket:
-    """Validate all fields, then append one ticket to the supplied collection.
-
-    Validation is completed before the collection is mutated, so invalid input
-    never creates a partial ticket or consumes an ID.
-    """
+    """Validate all fields, then append one ticket to the supplied collection."""
     clean_title = validate_title(title)
     clean_category = normalize_category(category)
     clean_urgency = normalize_urgency(urgency)
@@ -158,3 +177,51 @@ def create_ticket(
     )
     tickets.append(ticket)
     return ticket
+
+
+def list_tickets(tickets: Iterable[TicketLike]) -> list[TicketLike]:
+    """Return the current tickets in collection order without mutating them."""
+    return list(tickets)
+
+
+def get_ticket_by_id(
+    tickets: Iterable[TicketLike], ticket_id: object
+) -> TicketLike | None:
+    """Find a ticket by ID; trim surrounding whitespace from the requested ID."""
+    if not isinstance(ticket_id, str) or not ticket_id.strip():
+        return None
+    requested_id = ticket_id.strip()
+    for ticket in tickets:
+        if _field(ticket, "id") == requested_id:
+            return ticket
+    return None
+
+
+def format_ticket_list(tickets: Iterable[TicketLike]) -> str:
+    """Format a concise ticket listing with identifiers and current status."""
+    current = list_tickets(tickets)
+    if not current:
+        return "No tickets found."
+
+    rows = [
+        [_display_value(_field(ticket, key)) for key, _label in LIST_FIELDS]
+        for ticket in current
+    ]
+    headers = [label for _key, label in LIST_FIELDS]
+    widths = [
+        max(len(headers[index]), *(len(row[index]) for row in rows))
+        for index in range(len(headers))
+    ]
+    render = lambda values: " | ".join(
+        value.ljust(widths[index]) for index, value in enumerate(values)
+    )
+    divider = "-+-".join("-" * width for width in widths)
+    return "\\n".join([render(headers), divider, *(render(row) for row in rows)])
+
+
+def format_ticket_details(ticket: TicketLike) -> str:
+    """Format all eight fields of a ticket with human-readable labels."""
+    return "\\n".join(
+        f"{label}: {_display_value(_field(ticket, key))}"
+        for key, label in DETAIL_FIELDS
+    )
