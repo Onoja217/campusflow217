@@ -15,7 +15,7 @@ From the repository root:
 python -m campusflow.cli
 ```
 
-Choose **Create ticket**, **List all tickets**, **View ticket by ID**, or **Exit** from the menu. The CLI keeps tickets in memory for the current process; durable persistence is intentionally left to a separate feature.
+Use the menu to create, list, and view tickets; assign a ticket; change its status; or explicitly reopen a resolved ticket. New tickets start as `open`. Assign a ticket before moving it to `in_progress`; move it from `in_progress` to `resolved` when work is complete. Resolved tickets reject normal changes until explicitly reopened. The CLI keeps tickets in memory for the current process; durable persistence is intentionally left to a separate feature.
 
 ## Run tests
 
