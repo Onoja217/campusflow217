@@ -13,7 +13,15 @@ import re
 import tempfile
 from typing import Iterable
 
-from .tickets import CATEGORIES, PRIORITIES, TICKET_STATUSES, URGENCY_LEVELS, Ticket
+from .tickets import (
+    CATEGORIES,
+    PRIORITIES,
+    TICKET_STATUSES,
+    URGENCY_LEVELS,
+    Ticket,
+    TicketValidationError,
+    calculate_priority,
+)
 
 DEFAULT_TICKETS_PATH = Path("data/tickets.json")
 _REQUIRED_FIELDS = {
@@ -64,11 +72,28 @@ def _validate_record(value: object, index: int) -> Ticket:
         raise TicketPersistenceError(f"{prefix} has an unsupported priority.")
     if value["status"] not in TICKET_STATUSES or not isinstance(value["status"], str):
         raise TicketPersistenceError(f"{prefix} has an unsupported status.")
+
+    try:
+        expected_priority = calculate_priority(value["urgency"], value["affected_users"])
+    except TicketValidationError as error:
+        raise TicketPersistenceError(f"{prefix} has invalid priority inputs.") from error
+    if value["priority"] != expected_priority:
+        raise TicketPersistenceError(
+            f"{prefix} has inconsistent priority: expected {expected_priority!r} "
+            f"for its urgency and affected_users."
+        )
+
     assignee = value["assigned_to"]
     if assignee is not None and (
         not isinstance(assignee, str) or not assignee.strip()
     ):
         raise TicketPersistenceError(f"{prefix} has an invalid assigned_to value.")
+    if value["status"] == "in_progress" and (
+        not isinstance(assignee, str) or not assignee.strip()
+    ):
+        raise TicketPersistenceError(
+            f"{prefix} cannot be in_progress without an assigned_to value."
+        )
 
     return Ticket(**value)
 
